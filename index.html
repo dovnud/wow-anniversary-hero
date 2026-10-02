@@ -367,50 +367,105 @@
 
   /* ---------------- neon numeral texture ---------------- */
   function drawNumeral() {
-    var W = 900, H = 1200;
+    var W = 1100, H = 1400;
     var c = numTex.image;
     c.width = W; c.height = H;
     var g = c.getContext('2d');
     g.clearRect(0, 0, W, H);
     var font = '400 1000px Anton, Impact, "Arial Black", sans-serif';
+    function mk() { var k = document.createElement('canvas'); k.width = W; k.height = H; return k; }
     g.font = font;
-    g.textAlign = 'center';
-    g.textBaseline = 'alphabetic';
     var m = g.measureText('9');
     var asc = m.actualBoundingBoxAscent || 780, desc = m.actualBoundingBoxDescent || 0;
     var gw = (m.actualBoundingBoxLeft || 0) + (m.actualBoundingBoxRight || 600);
-    // scale the glyph so it fills ~70% of the card width / 66% of height, leaving room for the glow
-    var scale = Math.min((W * 0.62) / gw, (H * 0.64) / (asc + desc));
-    var cx = W / 2, baseY = H / 2 + (asc - desc) * scale / 2;
-    function glyph(mode, style, lw) {
-      g.save();
-      g.translate(cx, baseY); g.scale(scale, scale);
-      g.font = font; g.textAlign = 'center';
-      if (mode === 'fill') { g.fillStyle = style; g.fillText('9', 0, 0); }
-      else { g.lineJoin = 'round'; g.lineWidth = lw / scale; g.strokeStyle = style; g.strokeText('9', 0, 0); }
-      g.restore();
+    var scale = Math.min((W * 0.68) / gw, (H * 0.70) / (asc + desc));
+    var cx = W / 2 - 26, baseY = H / 2 - 20 + (asc - desc) * scale / 2;
+    var BOLD = 34;   // thickens the glyph so the bulbs have room, like the logo letters
+    function glyph(ctx, mode, style, lw, dx, dy) {
+      ctx.save();
+      ctx.translate(cx + (dx || 0), baseY + (dy || 0)); ctx.scale(scale, scale);
+      ctx.font = font; ctx.textAlign = 'center'; ctx.lineJoin = 'round';
+      if (mode === 'fill') { ctx.fillStyle = style; ctx.fillText('9', 0, 0); }
+      if (mode === 'both' || mode === 'stroke') {
+        ctx.lineWidth = lw / scale; ctx.strokeStyle = style; ctx.strokeText('9', 0, 0);
+      }
+      if (mode === 'both') { ctx.fillStyle = style; ctx.fillText('9', 0, 0); }
+      ctx.restore();
     }
-    // outer halo, built in passes so it stays soft but wide
-    var passes = [[130, 'rgba(20,100,255,.55)'], [70, 'rgba(40,150,255,.7)'], [30, 'rgba(110,210,255,.8)']];
-    passes.forEach(function (p) {
-      g.save(); g.shadowColor = p[1]; g.shadowBlur = p[0];
-      glyph('stroke', p[1], 10); g.restore();
+    // shared mask of the face shape
+    var mask = mk(), mg = mask.getContext('2d');
+    glyph(mg, 'both', '#fff', BOLD);
+    var md = mg.getImageData(0, 0, W, H).data;
+    function inside(x, y) { x = Math.round(x); y = Math.round(y); return x >= 0 && y >= 0 && x < W && y < H && md[(y * W + x) * 4 + 3] > 200; }
+
+    // 1. electric-blue halo behind everything
+    g.save(); g.shadowColor = 'rgba(0,190,255,.9)'; g.shadowBlur = 70;
+    glyph(g, 'both', 'rgba(0,150,230,.9)', BOLD + 8, 30, 26); g.restore();
+
+    // 2. extruded body: dark steps heading down and right, like the logo's sides
+    var DEPTH = 46, EX = 0.95, EY = 0.8;
+    for (var i = DEPTH; i >= 1; i--) {
+      var t = i / DEPTH;
+      var v = Math.round(12 + (1 - t) * 30);
+      glyph(g, 'both', 'rgb(' + v + ',' + (v + 2) + ',' + (v + 6) + ')', BOLD, i * EX, i * EY);
+    }
+
+    // 3. face layer: charcoal wood, bulbs, inner neon line; masked to the glyph afterwards
+    var face = mk(), f = face.getContext('2d');
+    var fg = f.createLinearGradient(0, 0, W * 0.5, H);
+    fg.addColorStop(0, '#4a4d52'); fg.addColorStop(0.5, '#2b2e33'); fg.addColorStop(1, '#17191d');
+    f.fillStyle = fg; f.fillRect(0, 0, W, H);
+    var seed = 7; function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+    for (i = 0; i < 90; i++) {            // vertical wood grain
+      f.strokeStyle = 'rgba(' + (rnd() < .5 ? '0,0,0,.18' : '255,255,255,.05') + ')';
+      f.lineWidth = 1 + rnd() * 2.5; var gx = rnd() * W;
+      f.beginPath(); f.moveTo(gx, 0); f.bezierCurveTo(gx + 14, H * .3, gx - 14, H * .6, gx + 6, H); f.stroke();
+    }
+    for (i = 0; i < 2600; i++) {          // speckle and wear
+      f.fillStyle = rnd() < .5 ? 'rgba(0,0,0,.35)' : 'rgba(255,255,255,.12)';
+      f.fillRect(rnd() * W, rnd() * H, 1 + rnd() * 2.4, 1 + rnd() * 2.4);
+    }
+    // bulbs on a staggered grid, kept clear of the edges
+    var R = 25, SP = 72, bulbs = [];
+    for (var row = 0, y = 0; y < H; y += SP * 0.87, row++) {
+      for (var x = (row % 2) * SP / 2; x < W; x += SP) {
+        var ok = inside(x, y);
+        for (var a = 0; ok && a < 8; a++) {
+          ok = inside(x + Math.cos(a * Math.PI / 4) * (R + 14), y + Math.sin(a * Math.PI / 4) * (R + 14));
+        }
+        if (ok) bulbs.push([x, y]);
+      }
+    }
+    f.globalCompositeOperation = 'lighter';
+    bulbs.forEach(function (b) {          // warm light spilling onto the wood
+      var gl = f.createRadialGradient(b[0], b[1], R * 0.4, b[0], b[1], R * 3.3);
+      gl.addColorStop(0, 'rgba(255,110,30,.55)'); gl.addColorStop(1, 'rgba(255,90,20,0)');
+      f.fillStyle = gl; f.beginPath(); f.arc(b[0], b[1], R * 3.3, 0, 7); f.fill();
     });
-    // warm red edge, then amber body, then hot core
-    glyph('stroke', '#1d6bff', 26);
-    var grad = g.createLinearGradient(0, baseY - asc * scale, 0, baseY + desc * scale);
-    grad.addColorStop(0, '#f2fcff'); grad.addColorStop(0.45, '#7fdcff'); grad.addColorStop(1, '#3a9cff');
-    glyph('fill', grad);
-    g.save();
-    g.globalCompositeOperation = 'source-atop';
-    var core = g.createRadialGradient(cx, H * 0.42, 20, cx, H * 0.42, H * 0.36);
-    core.addColorStop(0, 'rgba(255,255,255,.6)'); core.addColorStop(0.5, 'rgba(170,235,255,.25)'); core.addColorStop(1, 'rgba(170,235,255,0)');
-    g.fillStyle = core; g.fillRect(0, 0, W, H);
-    g.restore();
-    // thin bright tube line just inside the edge
-    g.save(); g.globalCompositeOperation = 'source-atop';
-    glyph('stroke', 'rgba(255,236,170,.0)', 0);
-    g.restore();
+    f.globalCompositeOperation = 'source-over';
+    bulbs.forEach(function (b) {
+      var s = f.createRadialGradient(b[0], b[1], R * 0.6, b[0], b[1], R * 1.25);   // socket
+      s.addColorStop(0, '#5a2a18'); s.addColorStop(0.7, '#2a140c'); s.addColorStop(1, '#0c0706');
+      f.fillStyle = s; f.beginPath(); f.arc(b[0], b[1], R * 1.2, 0, 7); f.fill();
+      var d = f.createRadialGradient(b[0] - R * .15, b[1] - R * .2, 1, b[0], b[1], R);
+      d.addColorStop(0, '#fff0b0'); d.addColorStop(0.25, '#ffb13a'); d.addColorStop(0.7, '#e5521a'); d.addColorStop(1, '#7a1e0a');
+      f.fillStyle = d; f.beginPath(); f.arc(b[0], b[1], R, 0, 7); f.fill();
+      f.fillStyle = 'rgba(255,255,255,.55)'; f.beginPath(); f.arc(b[0] - R * .35, b[1] - R * .4, R * .2, 0, 7); f.fill();
+    });
+    // inner cyan neon line just inside the edge
+    f.save(); f.shadowColor = 'rgba(0,210,255,.9)'; f.shadowBlur = 18;
+    glyph(f, 'stroke', '#27d9ff', 18); f.restore();
+    glyph(f, 'stroke', '#c9fbff', 4.5);
+    f.globalCompositeOperation = 'destination-in';
+    f.drawImage(mask, 0, 0);
+    g.drawImage(face, 0, 0);
+
+    // 4. thin glow that bleeds outside the edge
+    var edge = mk(), e = edge.getContext('2d');
+    e.shadowColor = 'rgba(0,200,255,.95)'; e.shadowBlur = 26;
+    glyph(e, 'stroke', '#35e1ff', 6);
+    e.globalCompositeOperation = 'destination-out'; e.shadowBlur = 0; e.drawImage(mask, 0, 0);
+    g.drawImage(edge, 0, 0);
 
     texAspect = W / H;
     uniforms.uNumW.value = NUM_H * texAspect;
