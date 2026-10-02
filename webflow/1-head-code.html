@@ -1,0 +1,113 @@
+<!-- 1. Webflow: Page settings > Custom code > Head code (or Site settings for all pages) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+<style>
+
+  /* ---------- WOW 9-year hero (everything is scoped under .wow9) ---------- */
+  .wow9, .wow9 * { box-sizing: border-box; }
+
+  .wow9 {
+    --wow9-photo: url("https://cdn.prod.website-files.com/690e7ceeb3d249294ed6993c/6abf11fe688d1d93af401850_wow1-water-hair-email.jpg");
+    --amber: #ffb43a;
+    --ember: #ff4a1c;
+    --ink: #07090d;
+    position: relative;
+    min-height: 100vh;
+    min-height: 100svh;
+    max-height: 1100px;
+    overflow: hidden;
+    isolation: isolate;
+    background: var(--ink);
+    color: #fff;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+
+  /* photo: slowly breathing so the page never feels frozen */
+  .wow9__photo {
+    position: absolute; inset: -3%;
+    background: var(--wow9-photo) center 30% / cover no-repeat;
+    filter: saturate(1.05) contrast(1.05);
+    animation: wow9-drift 40s ease-in-out infinite alternate;
+    z-index: -3;
+  }
+  @keyframes wow9-drift { to { transform: scale(1.06) translate3d(-1%, -1%, 0); } }
+
+  /* tone: dark enough for neon to read, open enough for the performers to show */
+  .wow9__shade {
+    position: absolute; inset: 0; z-index: -2;
+    background:
+      radial-gradient(ellipse 60% 45% at 50% 38%, rgba(255,120,30,.16), transparent 70%),
+      linear-gradient(180deg, rgba(7,9,13,.78) 0%, rgba(7,9,13,.35) 28%, rgba(7,9,13,.55) 58%, rgba(7,9,13,.94) 100%);
+  }
+
+  .wow9__gl {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    z-index: -1; display: block; pointer-events: none;
+  }
+
+  /* CSS stand-in if WebGL is unavailable */
+  .wow9__fallback9 {
+    display: none;
+    position: absolute; left: 50%; top: 4%; transform: translateX(-50%);
+    font: 400 clamp(220px, 46vh, 520px)/1 Anton, Impact, sans-serif;
+    background: linear-gradient(180deg, #ffd36a, #ff9a1f 55%, #ff4a1c);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 24px rgba(255,90,20,.7));
+    z-index: -1;
+  }
+  .wow9.is-nogl .wow9__fallback9 { display: block; }
+
+  /* content sits on the water, under the numeral */
+  .wow9__content {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+    padding: 0 clamp(18px, 4vw, 56px) clamp(28px, 5vh, 56px);
+    text-align: center;
+  }
+  .wow9__content::before {
+    content: ""; position: absolute; inset: -40px 0 0; z-index: -1; pointer-events: none;
+    background: linear-gradient(180deg, transparent, rgba(7,9,13,.72) 38%, rgba(7,9,13,.9));
+  }
+  .wow9__h1 {
+    margin: 0 auto;
+    font-family: Anton, Impact, "Arial Narrow Bold", sans-serif;
+    font-weight: 400;
+    font-size: clamp(36px, 6vw, 92px);
+    line-height: .98;
+    letter-spacing: .005em;
+    text-transform: uppercase;
+    text-shadow: 0 2px 30px rgba(0,0,0,.65);
+  }
+  .wow9__h1 em {
+    font-style: normal;
+    background: linear-gradient(180deg, #ffd978, #ff9d2a 60%, #ff5a22);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .wow9__sub {
+    max-width: 660px; margin: clamp(12px, 2vh, 20px) auto 0;
+    font-size: clamp(16px, 1.55vw, 20px); line-height: 1.5;
+    color: rgba(255,255,255,.92);
+    text-shadow: 0 1px 18px rgba(0,0,0,.8);
+  }
+  .wow9__cta { margin-top: clamp(18px, 3vh, 28px); display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .wow9__btn {
+    display: inline-block; text-decoration: none; font-weight: 700; font-size: 17px;
+    padding: 15px 34px; border-radius: 999px;
+    transition: transform .15s, box-shadow .2s, background .2s;
+  }
+  .wow9__btn--solid {
+    color: #1a0d02; background: linear-gradient(180deg, #ffc659, #ff9420);
+    box-shadow: 0 0 0 1px rgba(255,200,100,.5), 0 8px 30px rgba(255,110,20,.45);
+  }
+  .wow9__btn--solid:hover { transform: translateY(-2px); box-shadow: 0 0 0 1px #ffd98c, 0 12px 40px rgba(255,110,20,.65); }
+  .wow9__btn--ghost { color: #fff; border: 1.5px solid rgba(255,255,255,.55); background: rgba(7,9,13,.35); backdrop-filter: blur(4px); }
+  .wow9__btn--ghost:hover { border-color: #fff; background: rgba(255,255,255,.14); }
+  .wow9__btn:focus-visible, .wow9__navlink:focus-visible { outline: 3px solid #ffd98c; outline-offset: 3px; }
+  .wow9__fine { margin: 18px auto 0; font-size: 14px; color: rgba(255,255,255,.72); text-shadow: 0 1px 12px rgba(0,0,0,.9); }
+
+  @media (max-width: 640px) {
+    .wow9__btn { padding: 14px 26px; font-size: 16px; }
+    .wow9__cta { gap: 10px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .wow9__photo { animation: none; } }
+</style>
