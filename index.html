@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WOW 9 Years Hero</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+<style>
+  /* ---------- WOW 9-year hero (everything is scoped under .wow9) ---------- */
+  .wow9, .wow9 * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: #07090d; }
+
+  .wow9 {
+    --wow9-photo: url("https://cdn.prod.website-files.com/690e7ceeb3d249294ed6993c/6abf11fe688d1d93af401850_wow1-water-hair-email.jpg");
+    --amber: #ffb43a;
+    --ember: #ff4a1c;
+    --ink: #07090d;
+    position: relative;
+    min-height: 100vh;
+    min-height: 100svh;
+    max-height: 1100px;
+    overflow: hidden;
+    isolation: isolate;
+    background: var(--ink);
+    color: #fff;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+
+  /* photo: slowly breathing so the page never feels frozen */
+  .wow9__photo {
+    position: absolute; inset: -3%;
+    background: var(--wow9-photo) center 30% / cover no-repeat;
+    filter: saturate(1.05) contrast(1.05);
+    animation: wow9-drift 40s ease-in-out infinite alternate;
+    z-index: -3;
+  }
+  @keyframes wow9-drift { to { transform: scale(1.06) translate3d(-1%, -1%, 0); } }
+
+  /* tone: dark enough for neon to read, open enough for the performers to show */
+  .wow9__shade {
+    position: absolute; inset: 0; z-index: -2;
+    background:
+      radial-gradient(ellipse 60% 45% at 50% 38%, rgba(255,120,30,.16), transparent 70%),
+      linear-gradient(180deg, rgba(7,9,13,.78) 0%, rgba(7,9,13,.35) 28%, rgba(7,9,13,.55) 58%, rgba(7,9,13,.94) 100%);
+  }
+
+  .wow9__gl {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    z-index: -1; display: block; pointer-events: none;
+  }
+
+  /* CSS stand-in if WebGL is unavailable */
+  .wow9__fallback9 {
+    display: none;
+    position: absolute; left: 50%; top: 4%; transform: translateX(-50%);
+    font: 400 clamp(220px, 46vh, 520px)/1 Anton, Impact, sans-serif;
+    background: linear-gradient(180deg, #ffd36a, #ff9a1f 55%, #ff4a1c);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 24px rgba(255,90,20,.7));
+    z-index: -1;
+  }
+  .wow9.is-nogl .wow9__fallback9 { display: block; }
+
+  /* nav */
+  .wow9__nav {
+    position: relative; z-index: 2;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px clamp(18px, 4vw, 56px);
+  }
+  .wow9__logo img { height: 46px; width: auto; display: block; }
+  .wow9__navlink {
+    color: #fff; text-decoration: none; font-size: 15px;
+    padding: 9px 18px; border-radius: 999px;
+    border: 1px solid rgba(255,255,255,.4);
+    transition: background .2s, border-color .2s;
+  }
+  .wow9__navlink:hover { background: rgba(255,255,255,.12); border-color: #fff; }
+
+  /* content sits on the water, under the numeral */
+  .wow9__content {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+    padding: 0 clamp(18px, 4vw, 56px) clamp(28px, 5vh, 56px);
+    text-align: center;
+  }
+  .wow9__content::before {
+    content: ""; position: absolute; inset: -40px 0 0; z-index: -1; pointer-events: none;
+    background: linear-gradient(180deg, transparent, rgba(7,9,13,.72) 38%, rgba(7,9,13,.9));
+  }
+  .wow9__h1 {
+    margin: 0 auto;
+    font-family: Anton, Impact, "Arial Narrow Bold", sans-serif;
+    font-weight: 400;
+    font-size: clamp(36px, 6vw, 92px);
+    line-height: .98;
+    letter-spacing: .005em;
+    text-transform: uppercase;
+    text-shadow: 0 2px 30px rgba(0,0,0,.65);
+  }
+  .wow9__h1 em {
+    font-style: normal;
+    background: linear-gradient(180deg, #ffd978, #ff9d2a 60%, #ff5a22);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .wow9__sub {
+    max-width: 660px; margin: clamp(12px, 2vh, 20px) auto 0;
+    font-size: clamp(16px, 1.55vw, 20px); line-height: 1.5;
+    color: rgba(255,255,255,.92);
+    text-shadow: 0 1px 18px rgba(0,0,0,.8);
+  }
+  .wow9__cta { margin-top: clamp(18px, 3vh, 28px); display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .wow9__btn {
+    display: inline-block; text-decoration: none; font-weight: 700; font-size: 17px;
+    padding: 15px 34px; border-radius: 999px;
+    transition: transform .15s, box-shadow .2s, background .2s;
+  }
+  .wow9__btn--solid {
+    color: #1a0d02; background: linear-gradient(180deg, #ffc659, #ff9420);
+    box-shadow: 0 0 0 1px rgba(255,200,100,.5), 0 8px 30px rgba(255,110,20,.45);
+  }
+  .wow9__btn--solid:hover { transform: translateY(-2px); box-shadow: 0 0 0 1px #ffd98c, 0 12px 40px rgba(255,110,20,.65); }
+  .wow9__btn--ghost { color: #fff; border: 1.5px solid rgba(255,255,255,.55); background: rgba(7,9,13,.35); backdrop-filter: blur(4px); }
+  .wow9__btn--ghost:hover { border-color: #fff; background: rgba(255,255,255,.14); }
+  .wow9__btn:focus-visible, .wow9__navlink:focus-visible { outline: 3px solid #ffd98c; outline-offset: 3px; }
+  .wow9__fine { margin: 18px auto 0; font-size: 14px; color: rgba(255,255,255,.72); text-shadow: 0 1px 12px rgba(0,0,0,.9); }
+
+  @media (max-width: 640px) {
+    .wow9__logo img { height: 36px; }
+    .wow9__btn { padding: 14px 26px; font-size: 16px; }
+    .wow9__cta { gap: 10px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .wow9__photo { animation: none; } }
+
+  /* stand-in for the existing video section so the anchor has somewhere to land; delete when merging */
+  .demo-watch { min-height: 70vh; display: grid; place-items: center; color: #8b93a1; font: 16px Helvetica, Arial, sans-serif; background: #0b0e14; }
+</style>
+</head>
+<body>
+
+<section class="wow9" id="wow9-hero">
+  <div class="wow9__photo" role="presentation"></div>
+  <div class="wow9__shade"></div>
+  <div class="wow9__fallback9" aria-hidden="true">9</div>
+  <canvas class="wow9__gl" aria-hidden="true"></canvas>
+
+  <nav class="wow9__nav">
+    <a class="wow9__logo" href="https://wow-vegas.com/" aria-label="WOW - The Vegas Spectacular home">
+      <img src="https://cdn.prod.website-files.com/690e7ceeb3d249294ed6993c/690edb91e10d6f318eb156f4_logocolor%20(1).png" alt="WOW - The Vegas Spectacular">
+    </a>
+    <a class="wow9__navlink" href="https://www.ticketmaster.com/wow-the-vegas-spectacular-tickets/artist/2400683">Get Tickets</a>
+  </nav>
+
+  <div class="wow9__content">
+    <h1 class="wow9__h1">Nine years. <em>One iconic show.</em></h1>
+    <p class="wow9__sub">This October, WOW - The Vegas Spectacular celebrates nine years at Rio. More than 3,500 performances and millions of guests later, it&rsquo;s still the iconic night out in Las Vegas.</p>
+    <div class="wow9__cta">
+      <a class="wow9__btn wow9__btn--solid" href="https://www.ticketmaster.com/wow-the-vegas-spectacular-tickets/artist/2400683">Get Tickets</a>
+      <a class="wow9__btn wow9__btn--ghost" href="#watch">Watch the Show</a>
+    </div>
+    <p class="wow9__fine">Tuesday through Sunday at 7pm, dark Mondays. 90 minutes, open to all ages, recommended 3 and up.</p>
+  </div>
+</section>
+
+<section class="demo-watch" id="watch">Existing video section goes here (anchor target for "Watch the Show").</section>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.min.js"></script>
+<script>
+(function () {
+  var root = document.getElementById('wow9-hero');
+  var canvas = root.querySelector('.wow9__gl');
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function fail() { root.classList.add('is-nogl'); }
+  if (!window.THREE) return fail();
+
+  var renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true, premultipliedAlpha: true });
+  } catch (e) { return fail(); }
+  renderer.setClearColor(0x000000, 0);
+
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(32, 1, 0.1, 120);
+
+  /* ------------------------------------------------------------------
+     World layout. The numeral stands upright at z = 0, its lower part
+     under the surface (y < 0) like the tip of an iceberg. Water is the
+     plane y = 0 stretching toward the viewer (+z) and away (-z).
+  ------------------------------------------------------------------ */
+  var NUM_H = 5.0;            // height of the numeral quad in world units
+  var NUM_SUB = 1.0;         // how much of the quad is below the waterline
+  var texAspect = 0.72;       // updated when the texture is drawn
+  var numTex = new THREE.CanvasTexture(document.createElement('canvas'));
+  numTex.generateMipmaps = true;
+  numTex.minFilter = THREE.LinearMipmapLinearFilter;
+  numTex.premultiplyAlpha = true;
+  numTex.anisotropy = 4;
+
+  var uniforms = {
+    uTime: { value: 0 },
+    uTex: { value: numTex },
+    uCam: { value: camera.position },
+    uNumW: { value: NUM_H * texAspect },
+    uNumH: { value: NUM_H },
+    uNumSub: { value: NUM_SUB },
+    uBeat: { value: 1 }
+  };
+
+  var GLSL_WAVES = [
+    'float waveH(vec2 p, float t, float detail){',
+    '  float h = 0.0;',
+    '  h += sin(dot(p, vec2( 0.35, 1.00)) * 1.15 + t * 0.85) * 0.070;',
+    '  h += sin(dot(p, vec2(-0.80, 0.55)) * 1.90 + t * 1.10) * 0.045;',
+    '  h += sin(dot(p, vec2( 0.95, 0.20)) * 2.80 - t * 1.35) * 0.028;',
+    '  h += sin(dot(p, vec2(-0.30,-1.00)) * 0.62 + t * 0.55) * 0.095;',
+    '  h += detail * sin(dot(p, vec2( 0.60, 0.80)) * 5.40 + t * 1.90) * 0.011;',
+    '  h += detail * sin(dot(p, vec2(-0.90, 0.40)) * 7.70 - t * 2.30) * 0.007;',
+    '  h += detail * sin(dot(p, vec2( 0.10,-0.99)) * 11.0 + t * 2.70) * 0.004;',
+    '  return h;',
+    '}'
+  ].join('\n');
+
+  var water = new THREE.Mesh(
+    new THREE.PlaneGeometry(70, 80, 220, 260),
+    new THREE.ShaderMaterial({
+      uniforms: uniforms,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.CustomBlending,
+      blendEquation: THREE.AddEquation,
+      blendSrc: THREE.OneFactor,
+      blendDst: THREE.OneMinusSrcAlphaFactor,
+      vertexShader: [
+        'varying vec3 vW;',
+        'uniform float uTime;',
+        GLSL_WAVES,
+        'void main(){',
+        '  vec4 w = modelMatrix * vec4(position, 1.0);',
+        '  w.y += waveH(w.xz, uTime, 0.0);',
+        '  vW = w.xyz;',
+        '  gl_Position = projectionMatrix * viewMatrix * w;',
+        '}'
+      ].join('\n'),
+      fragmentShader: [
+        'precision highp float;',
+        'varying vec3 vW;',
+        'uniform float uTime, uNumW, uNumH, uNumSub, uBeat;',
+        'uniform vec3 uCam;',
+        'uniform sampler2D uTex;',
+        GLSL_WAVES,
+        'float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }',
+        'vec2 numUV(vec2 xy){ return vec2(xy.x / uNumW + 0.5, (xy.y + uNumSub) / uNumH); }',
+        'vec4 numSample(vec2 xy, float bias){',
+        '  vec2 uv = numUV(xy);',
+        '  if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return vec4(0.0);',
+        '  float edge = smoothstep(0.0, 0.06, uv.x) * smoothstep(1.0, 0.94, uv.x) * smoothstep(0.0, 0.05, uv.y) * smoothstep(1.0, 0.95, uv.y);',
+        '  return texture2D(uTex, uv, bias) * edge;',
+        '}',
+        'void main(){',
+        '  vec2 p = vW.xz;',
+        '  float e = 0.03;',
+        '  float h0 = waveH(p, uTime, 1.0);',
+        '  float hx = waveH(p + vec2(e, 0.0), uTime, 1.0);',
+        '  float hz = waveH(p + vec2(0.0, e), uTime, 1.0);',
+        '  vec3 N = normalize(vec3(-(hx - h0) / e, 1.0, -(hz - h0) / e));',
+        '  vec3 V = normalize(vW - uCam);',
+        '  float cosT = max(dot(N, -V), 0.0);',
+        '  float fres = 0.04 + 0.96 * pow(1.0 - cosT, 4.0);',
+        '',
+        '  // far fade: water dissolves into the photo instead of ending in a hard horizon',
+        '  float far = smoothstep(-34.0, -4.0, vW.z);',
+        '  float near = smoothstep(14.0, 4.0, vW.z);',
+        '',
+        '  vec3 deep = vec3(0.012, 0.030, 0.045);',
+        '  vec3 shallow = vec3(0.030, 0.095, 0.115);',
+        '  vec3 col = mix(deep, shallow, pow(1.0 - cosT, 2.0) * 0.8);',
+        '  float a = 0.58;',
+        '',
+        '  // reflection of the numeral (analytic ray vs. the upright quad at z = 0)',
+        '  vec3 R = reflect(V, N);',
+        '  vec3 refl = vec3(0.0); float ra = 0.0;',
+        '  if (vW.z > 0.0 && R.z < -0.02) {',
+        '    float t = -vW.z / R.z;',
+        '    vec3 hit = vW + R * t;',
+        '    if (hit.y > 0.0) {',
+        '      float blur = 0.3 + hit.y * 0.22 + t * 0.04;',
+        '      vec4 s = numSample(hit.xy, blur);',
+        '      float fadeR = exp(-hit.y * 0.17);',
+        '      refl = s.rgb * fadeR; ra = s.a * fadeR;',
+        '    }',
+        '  }',
+        '',
+        '  // the submerged part of the numeral seen through the surface',
+        '  vec3 Rf = refract(V, N, 0.75);',
+        '  vec3 under = vec3(0.0);',
+        '  if (vW.z > 0.0 && Rf.z < -0.02) {',
+        '    float t = -vW.z / Rf.z;',
+        '    vec3 hit = vW + Rf * t;',
+        '    if (hit.y < 0.0) {',
+        '      float d = -hit.y;',
+        '      vec4 s = numSample(hit.xy, 1.6 + d * 2.2);',
+        '      under = s.rgb * exp(-d * 1.55) * 0.9;',
+        '    }',
+        '  }',
+        '  col += under * (1.0 - fres) * 1.15;',
+        '',
+        '  // sky / ambient tint on grazing angles',
+        '  col += vec3(0.10, 0.07, 0.07) * fres * 0.9;',
+        '  col += refl * (0.55 + fres * 1.6) * uBeat;',
+        '  a += fres * 0.35 + dot(refl, vec3(0.33)) * 0.8 + dot(under, vec3(0.33)) * 0.6;',
+        '',
+        '  // warm glitter column under the numeral',
+        '  vec3 L = normalize(vec3(0.0, 3.2, -0.6) - vW);',
+        '  float sp = pow(max(dot(R, L), 0.0), 140.0);',
+        '  float sp2 = pow(max(dot(R, L), 0.0), 18.0) * 0.12;',
+        '  float spark = step(0.9, hash(floor(p * 70.0) + floor(uTime * 3.0)));',
+        '  vec3 warm = vec3(1.0, 0.55, 0.18);',
+        '  float colW = exp(-pow(vW.x / (uNumW * 0.55), 2.0));',
+        '  col += warm * (sp * 2.4 + sp2) * colW * uBeat;',
+        '  col += vec3(1.0, 0.8, 0.5) * spark * sp * 3.0 * colW;',
+        '  a += (sp + sp2) * 0.6;',
+        '',
+        '  // light pooled around the base of the numeral',
+        '  float pool = exp(-pow(vW.x / (uNumW * 0.5), 2.0)) * exp(-abs(vW.z) * 1.4);',
+        '  col += warm * pool * 0.35 * uBeat;',
+        '  a += pool * 0.2;',
+        '',
+        '  // crest highlights',
+        '  float crest = smoothstep(0.075, 0.17, h0);',
+        '  col += vec3(0.30, 0.45, 0.50) * crest * 0.18 * (1.0 - far * 0.0);',
+        '',
+        '  a = clamp(a, 0.0, 1.0) * far * near;',
+        '  gl_FragColor = vec4(col * far * near, a);',
+        '}'
+      ].join('\n')
+    })
+  );
+  water.rotation.x = -Math.PI / 2;
+  water.position.z = -12;   // extend further away than toward the camera
+  scene.add(water);
+
+  // upright numeral, only the part above the waterline (the rest is drawn by the water)
+  var num = new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1),
+    new THREE.ShaderMaterial({
+      uniforms: uniforms,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.CustomBlending,
+      blendEquation: THREE.AddEquation,
+      blendSrc: THREE.OneFactor,
+      blendDst: THREE.OneMinusSrcAlphaFactor,
+      vertexShader: [
+        'varying vec2 vUv; varying float vY;',
+        'void main(){ vUv = uv; vec4 w = modelMatrix * vec4(position, 1.0); vY = w.y;',
+        '  gl_Position = projectionMatrix * viewMatrix * w; }'
+      ].join('\n'),
+      fragmentShader: [
+        'varying vec2 vUv; varying float vY;',
+        'uniform sampler2D uTex; uniform float uBeat, uTime;',
+        'void main(){',
+        '  vec4 c = texture2D(uTex, vUv);',
+        '  float m = smoothstep(-0.02, 0.10, vY);',
+        '  float flick = 1.0 + 0.025 * sin(uTime * 23.0) * sin(uTime * 3.1);',
+        '  gl_FragColor = c * m * uBeat * flick;',
+        '}'
+      ].join('\n')
+    })
+  );
+  scene.add(num);
+
+  /* ---------------- neon numeral texture ---------------- */
+  function drawNumeral() {
+    var W = 900, H = 1200;
+    var c = numTex.image;
+    c.width = W; c.height = H;
+    var g = c.getContext('2d');
+    g.clearRect(0, 0, W, H);
+    var font = '400 1000px Anton, Impact, "Arial Black", sans-serif';
+    g.font = font;
+    g.textAlign = 'center';
+    g.textBaseline = 'alphabetic';
+    var m = g.measureText('9');
+    var asc = m.actualBoundingBoxAscent || 780, desc = m.actualBoundingBoxDescent || 0;
+    var gw = (m.actualBoundingBoxLeft || 0) + (m.actualBoundingBoxRight || 600);
+    // scale the glyph so it fills ~70% of the card width / 66% of height, leaving room for the glow
+    var scale = Math.min((W * 0.62) / gw, (H * 0.64) / (asc + desc));
+    var cx = W / 2, baseY = H / 2 + (asc - desc) * scale / 2;
+    function glyph(mode, style, lw) {
+      g.save();
+      g.translate(cx, baseY); g.scale(scale, scale);
+      g.font = font; g.textAlign = 'center';
+      if (mode === 'fill') { g.fillStyle = style; g.fillText('9', 0, 0); }
+      else { g.lineJoin = 'round'; g.lineWidth = lw / scale; g.strokeStyle = style; g.strokeText('9', 0, 0); }
+      g.restore();
+    }
+    // outer halo, built in passes so it stays soft but wide
+    var passes = [[130, 'rgba(255,60,20,.55)'], [70, 'rgba(255,90,25,.7)'], [30, 'rgba(255,140,40,.8)']];
+    passes.forEach(function (p) {
+      g.save(); g.shadowColor = p[1]; g.shadowBlur = p[0];
+      glyph('stroke', p[1], 10); g.restore();
+    });
+    // warm red edge, then amber body, then hot core
+    glyph('stroke', '#e8330f', 26);
+    var grad = g.createLinearGradient(0, baseY - asc * scale, 0, baseY + desc * scale);
+    grad.addColorStop(0, '#ffcf6a'); grad.addColorStop(0.45, '#ffa22a'); grad.addColorStop(1, '#ff6a22');
+    glyph('fill', grad);
+    g.save();
+    g.globalCompositeOperation = 'source-atop';
+    var core = g.createRadialGradient(cx, H * 0.42, 20, cx, H * 0.42, H * 0.36);
+    core.addColorStop(0, 'rgba(255,236,170,.5)'); core.addColorStop(0.5, 'rgba(255,214,120,.25)'); core.addColorStop(1, 'rgba(255,214,120,0)');
+    g.fillStyle = core; g.fillRect(0, 0, W, H);
+    g.restore();
+    // thin bright tube line just inside the edge
+    g.save(); g.globalCompositeOperation = 'source-atop';
+    glyph('stroke', 'rgba(255,236,170,.0)', 0);
+    g.restore();
+
+    texAspect = W / H;
+    uniforms.uNumW.value = NUM_H * texAspect;
+    numTex.needsUpdate = true;
+    num.scale.set(NUM_H * texAspect, NUM_H, 1);
+    num.position.set(0, NUM_H / 2 - NUM_SUB, 0);
+  }
+  drawNumeral();
+  if (document.fonts && document.fonts.load) {
+    document.fonts.load('400 200px Anton', '9').then(function () { drawNumeral(); renderOnce(); }).catch(function () {});
+  }
+
+  /* ---------------- framing ---------------- */
+  var CAM_Y = 2.0;
+  function resize() {
+    var w = root.clientWidth, h = root.clientHeight;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    renderer.setPixelRatio(dpr);
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    // keep the numeral fully in frame on tall/narrow screens
+    var tanH = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+    var needW = NUM_H * texAspect * 1.9;
+    var dist = Math.max(15, needW / (2 * tanH * camera.aspect));
+    camera.position.set(0, CAM_Y, dist);
+    camera.lookAt(0, CAM_Y, 0);
+    camera.updateProjectionMatrix();
+    // slide the scene up/down so the waterline sits at a fixed fraction of the hero height
+    var wlFrac = w < 700 ? 0.40 : 0.43;
+    var ndcNow = -CAM_Y / (dist * tanH);          // where (0,0,0) lands with the level camera
+    var ndcWant = 1 - 2 * wlFrac;
+    camera.projectionMatrix.elements[9] = -(ndcWant - ndcNow);
+    camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
+    renderOnce();
+  }
+
+  /* ---------------- loop ---------------- */
+  var running = false, raf = 0, t0 = performance.now();
+  function renderOnce() { uniforms.uTime.value = reduce ? 4.0 : (performance.now() - t0) / 1000; renderer.render(scene, camera); }
+  function loop() {
+    if (!running) return;
+    renderOnce();
+    raf = requestAnimationFrame(loop);
+  }
+  function start() { if (!running && !reduce) { running = true; loop(); } }
+  function stop() { running = false; cancelAnimationFrame(raf); }
+
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (e) { e[0].isIntersecting ? start() : stop(); }).observe(root);
+  } else { start(); }
+  document.addEventListener('visibilitychange', function () { document.hidden ? stop() : start(); });
+  if ('ResizeObserver' in window) new ResizeObserver(resize).observe(root); else window.addEventListener('resize', resize);
+  resize();
+  window.__wow9 = { renderOnce: renderOnce, uniforms: uniforms };
+})();
+</script>
+</body>
+</html>
