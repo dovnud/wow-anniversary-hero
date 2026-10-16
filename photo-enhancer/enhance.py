@@ -23,7 +23,7 @@ EXTS = {".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff", ".bmp"}
 class Settings:
     denoise: float = 0.6      # 0..1 luma noise reduction (chroma is always stronger)
     upscale: float = 1.0      # output scale factor
-    wb: float = 0.5           # 0 = keep stage color cast, 1 = fully neutralize
+    wb: float = 0.0           # 0 = keep stage color cast, 1 = fully neutralize (stage light IS the mood, keep low)
     exposure: float = 0.0     # EV before tone mapping
     shadows: float = 0.5      # 0..1 lift dark areas
     highlights: float = 0.5   # 0..1 pull bright lights back (saves color in blown LEDs)
@@ -38,12 +38,12 @@ class Settings:
 
 PRESETS = {
     "concert": Settings(),
-    "dslr": Settings(denoise=0.4, wb=0.8, shadows=0.3, highlights=0.3, contrast=0.3,
+    "dslr": Settings(denoise=0.4, wb=0.5, shadows=0.3, highlights=0.3, contrast=0.3,
                      vibrance=0.2, clarity=0.3, grain=0.08, vignette=0.15),
     "night": Settings(denoise=0.85, exposure=0.6, shadows=0.75, highlights=0.65,
                       clarity=0.4, grain=0.2, vignette=0.25),
-    "warm": Settings(wb=0.4, warmth=0.35, vibrance=0.35, contrast=0.4, vignette=0.25),
-    "film": Settings(wb=0.3, contrast=0.5, vibrance=0.15, grain=0.35, vignette=0.35,
+    "warm": Settings(wb=0.1, warmth=0.35, vibrance=0.35, contrast=0.4, vignette=0.25),
+    "film": Settings(wb=0.1, contrast=0.5, vibrance=0.15, grain=0.35, vignette=0.35,
                      warmth=0.15, clarity=0.2),
 }
 
@@ -99,7 +99,7 @@ def white_balance(lin, s):
         if m.sum() > 100:
             mean = lin[m].mean(0)
             gain = mean.mean() / np.maximum(mean, 1e-4)
-            gain = np.clip(gain, 0.6, 1.8) ** s.wb
+            gain = np.clip(gain, 0.7, 1.4) ** s.wb
             lin = lin * gain
     if s.warmth:
         lin = lin * np.array([1 + 0.12 * s.warmth, 1, 1 - 0.15 * s.warmth], np.float32)
@@ -119,9 +119,10 @@ def tone_map(lin, s):
     small = cv2.bilateralFilter(small, 0, 1.0, 0.04 * max(small.shape))
     base = cv2.resize(small, (w, h), interpolation=cv2.INTER_CUBIC)
     detail = logy - base
-    pivot = np.median(base)
-    lift = np.clip(pivot - base, 0, None) * (0.55 * s.shadows)      # dark areas up
-    pull = np.clip(base - pivot, 0, None) * (-0.45 * s.highlights)  # bright areas down
+    # fixed targets (not the median): dark shows are mostly black, so a median pivot lifts nothing
+    ref_dark, ref_bright = np.log2(0.2), np.log2(0.55)
+    lift = np.minimum(np.clip(ref_dark - base, 0, None) * 0.45 * s.shadows, 1.6)  # dark areas up, capped so noise isn't boosted
+    pull = np.clip(base - ref_bright, 0, None) * (-0.6 * s.highlights)           # bright areas down
     new_y = 2.0 ** (base + lift + pull + detail)
     ratio = (new_y / y)[..., None]
     out = lin * ratio
