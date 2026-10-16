@@ -1,3 +1,7 @@
 numpy
 opencv-python-headless
 pillow
+# learned denoiser (optional, big quality gain; CPU ok, GPU much faster)
+torch
+timm
+einops

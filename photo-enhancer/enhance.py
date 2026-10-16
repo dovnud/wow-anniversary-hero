@@ -21,7 +21,8 @@ EXTS = {".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff", ".bmp"}
 
 @dataclass
 class Settings:
-    denoise: float = 0.6      # 0..1 luma noise reduction (chroma is always stronger)
+    ai: float = 0.85          # 0..1 blend of the learned (non-generative) denoiser; 0 = classical only
+    denoise: float = 0.6      # classical denoise strength (used alone, or lightly on top of AI)
     upscale: float = 1.0      # output scale factor
     wb: float = 0.0           # 0 = keep stage color cast, 1 = fully neutralize (stage light IS the mood, keep low)
     exposure: float = 0.0     # EV before tone mapping
@@ -37,10 +38,10 @@ class Settings:
 
 
 PRESETS = {
-    "concert": Settings(),
+    "concert": Settings(shadows=0.7, clarity=0.4),
     "dslr": Settings(denoise=0.4, wb=0.5, shadows=0.3, highlights=0.3, contrast=0.3,
                      vibrance=0.2, clarity=0.3, grain=0.08, vignette=0.15),
-    "night": Settings(denoise=0.85, exposure=0.6, shadows=0.75, highlights=0.65,
+    "night": Settings(ai=1.0, exposure=0.5, shadows=0.9, highlights=0.65,
                       clarity=0.4, grain=0.2, vignette=0.25),
     "warm": Settings(wb=0.1, warmth=0.35, vibrance=0.35, contrast=0.4, vignette=0.25),
     "film": Settings(wb=0.1, contrast=0.5, vibrance=0.15, grain=0.35, vignette=0.35,
@@ -72,6 +73,18 @@ def luma(lin):
 
 def denoise(rgb, s):
     """Chroma gets heavy smoothing (the ugly blotchy color noise); luma stays gentler."""
+    if s.ai > 0:
+        try:
+            import ai_denoise
+            learned = ai_denoise.denoise(rgb)
+            mixed = cv2.addWeighted(learned, s.ai, rgb, 1 - s.ai, 0)
+            return mixed if s.denoise <= 0 else denoise_classical(mixed, replace(s, denoise=s.denoise * 0.3))
+        except ImportError as e:
+            print(f"AI denoise unavailable ({e}); using classical. pip install torch timm einops", file=sys.stderr)
+    return denoise_classical(rgb, s)
+
+
+def denoise_classical(rgb, s):
     if s.denoise <= 0:
         return rgb
     ycc = cv2.cvtColor(rgb, cv2.COLOR_RGB2YCrCb)
@@ -208,6 +221,7 @@ def main(argv=None):
     p.add_argument("input", type=Path, help="image file or folder")
     p.add_argument("-o", "--out", type=Path, help="output file or folder")
     p.add_argument("-p", "--preset", choices=PRESETS, default="concert")
+    p.add_argument("--no-ai", action="store_true", help="skip the learned denoiser (much faster on CPU)")
     p.add_argument("--compare", action="store_true", help="also write a before|after image")
     for f in Settings.__dataclass_fields__:
         p.add_argument("--" + f, type=float, help=f"override preset value for {f}")
@@ -215,6 +229,8 @@ def main(argv=None):
 
     s = replace(PRESETS[a.preset], **{f: getattr(a, f) for f in Settings.__dataclass_fields__
                                       if getattr(a, f) is not None})
+    if a.no_ai:
+        s = replace(s, ai=0.0)
     if a.input.is_dir():
         files = sorted(f for f in a.input.iterdir() if f.suffix.lower() in EXTS and "_enhanced" not in f.stem)
         outdir = a.out or a.input / "enhanced"
