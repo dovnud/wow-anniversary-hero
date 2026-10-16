@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Show Photo Enhancer</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%23ff7a2f%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%276%27 fill=%27white%27/%3E%3C/svg%3E">
+<style>
+  :root { --bg:#0e0e12; --panel:#181820; --line:#2a2a36; --text:#f1f1f5; --mute:#9a9aab; --accent:#ff7a2f; }
+  @media (prefers-color-scheme: light) { :root { --bg:#f6f6f9; --panel:#fff; --line:#dcdce6; --text:#17171d; --mute:#666676; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.45 system-ui,-apple-system,Segoe UI,sans-serif; }
+  main { max-width:960px; margin:0 auto; padding:24px 16px 48px; }
+  h1 { font-size:1.5rem; margin:0 0 4px; } .sub { color:var(--mute); margin:0 0 20px; }
+  .drop { border:2px dashed var(--line); background:var(--panel); border-radius:16px; padding:40px 16px; text-align:center; cursor:pointer; transition:.15s; }
+  .drop.over, .drop:hover { border-color:var(--accent); }
+  .drop b { display:block; font-size:1.1rem; margin-bottom:4px; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; margin:16px 0; align-items:center; }
+  .chip { border:1px solid var(--line); background:var(--panel); color:var(--text); padding:8px 14px; border-radius:999px; cursor:pointer; font:inherit; }
+  .chip[aria-pressed=true] { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .label { color:var(--mute); font-size:.85rem; width:100%; }
+  .btn { background:var(--accent); color:#fff; border:0; padding:12px 22px; border-radius:12px; font:inherit; font-weight:600; cursor:pointer; text-decoration:none; display:inline-block; }
+  .btn.ghost { background:var(--panel); color:var(--text); border:1px solid var(--line); }
+  .btn:disabled { opacity:.5; cursor:default; }
+  .stage { position:relative; margin-top:16px; border-radius:14px; overflow:hidden; background:#000; user-select:none; touch-action:pan-y; }
+  .stage img { display:block; width:100%; height:auto; }
+  .stage .after { position:absolute; inset:0; clip-path:inset(0 0 0 50%); }
+  .stage .bar { position:absolute; top:0; bottom:0; width:2px; background:#fff; left:50%; pointer-events:none; box-shadow:0 0 6px #0008; }
+  .stage .tag { position:absolute; top:10px; padding:3px 9px; border-radius:6px; background:#000a; color:#fff; font-size:.8rem; }
+  input[type=range] { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:ew-resize; margin:0; }
+  .status { margin:16px 0; color:var(--mute); } .err { color:#ff5a5a; }
+  .spin { display:inline-block; width:14px; height:14px; border:2px solid var(--line); border-top-color:var(--accent); border-radius:50%; animation:r 1s linear infinite; vertical-align:-2px; margin-right:8px; }
+  @keyframes r { to { transform:rotate(360deg) } }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Show Photo Enhancer</h1>
+  <p class="sub">Cleaner, richer, more DSLR-like. Faces are never regenerated &mdash; noise is removed, not invented over.</p>
+
+  <label class="drop" id="drop">
+    <b id="dropTitle">Tap to choose a photo</b>
+    <span class="sub" id="dropSub">or drag one here &middot; JPG, PNG, HEIC</span>
+    <input id="file" type="file" accept="image/*" hidden>
+  </label>
+
+  <div class="row" id="opts">
+    <span class="label">Look</span>
+    <span id="presets"></span>
+    <span class="label">Quality</span>
+    <span>
+      <button class="chip" data-q="best" aria-pressed="true">Best (AI cleanup, slower)</button>
+      <button class="chip" data-q="fast" aria-pressed="false">Fast</button>
+    </span>
+  </div>
+  <button class="btn" id="go" disabled>Enhance</button>
+
+  <div class="status" id="status" hidden></div>
+
+  <div id="result" hidden>
+    <div class="stage" id="stage">
+      <img id="imgBefore" alt="Original">
+      <div class="after"><img id="imgAfter" alt="Enhanced"></div>
+      <div class="bar" id="bar"></div>
+      <span class="tag" style="left:10px">Original</span><span class="tag" style="right:10px">Enhanced</span>
+      <input type="range" min="0" max="100" value="50" id="slider" aria-label="Before / after">
+    </div>
+    <div class="row">
+      <a class="btn" id="dl" download>Download enhanced</a>
+      <button class="btn ghost" id="again">Another photo</button>
+    </div>
+  </div>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+let file = null, preset = 'concert', quality = 'best';
+const LABELS = {concert:'Concert', night:'Night / very dark', dslr:'DSLR neutral', warm:'Warm', film:'Film'};
+
+fetch('/api/presets').then(r => r.json()).then(list => {
+  $('#presets').innerHTML = list.map(p => `<button class="chip" data-p="${p}" aria-pressed="${p===preset}">${LABELS[p]||p}</button>`).join(' ');
+});
+document.addEventListener('click', e => {
+  const c = e.target.closest('.chip'); if (!c) return;
+  const g = c.parentElement; g.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', x === c));
+  if (c.dataset.p) preset = c.dataset.p; if (c.dataset.q) quality = c.dataset.q;
+});
+
+function pick(f) {
+  if (!f) return; file = f;
+  $('#dropTitle').textContent = f.name; $('#dropSub').textContent = (f.size/1048576).toFixed(1) + ' MB – tap to change';
+  $('#go').disabled = false;
+}
+$('#file').onchange = e => pick(e.target.files[0]);
+const drop = $('#drop');
+['dragenter','dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave','drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => pick(e.dataTransfer.files[0]));
+
+const status = (html, err) => { const s = $('#status'); s.hidden = !html; s.className = 'status' + (err ? ' err' : ''); s.innerHTML = html; };
+
+$('#go').onclick = async () => {
+  $('#go').disabled = true; $('#result').hidden = true;
+  status('<span class="spin"></span>Uploading…');
+  const fd = new FormData(); fd.append('photo', file); fd.append('preset', preset); fd.append('quality', quality);
+  let id;
+  try {
+    const r = await fetch('/api/enhance', {method:'POST', body:fd});
+    if (!r.ok) throw new Error((await r.text()).replace(/<[^>]+>/g,'').trim().slice(0,200) || r.status);
+    id = (await r.json()).id;
+  } catch (e) { status('Upload failed: ' + e.message, true); $('#go').disabled = false; return; }
+
+  const t0 = Date.now();
+  while (true) {
+    await new Promise(r => setTimeout(r, 1500));
+    let j; try { j = await (await fetch('/api/jobs/' + id)).json(); } catch { continue; }
+    const secs = Math.round((Date.now() - t0) / 1000);
+    if (j.status === 'done') break;
+    if (j.status === 'error' || j.error) { status('Failed: ' + (j.error || 'unknown error'), true); $('#go').disabled = false; return; }
+    status(`<span class="spin"></span>${j.status === 'queued' ? 'Waiting in line (' + j.ahead + ' ahead)' : 'Enhancing' + (quality === 'best' ? ' – AI cleanup can take a couple of minutes' : '')}… ${secs}s`);
+  }
+  $('#imgBefore').src = `/api/jobs/${id}/original.jpg`;
+  $('#imgAfter').src = `/api/jobs/${id}/result.jpg`;
+  $('#dl').href = `/api/jobs/${id}/result.jpg?dl=1`;
+  status(''); $('#result').hidden = false; $('#go').disabled = false;
+  $('#result').scrollIntoView({behavior:'smooth'});
+};
+$('#slider').oninput = e => {
+  const v = e.target.value; $('.after').style.clipPath = `inset(0 0 0 ${v}%)`; $('#bar').style.left = v + '%';
+};
+$('#again').onclick = () => { $('#result').hidden = true; window.scrollTo({top:0, behavior:'smooth'}); };
+</script>
+</body>
+</html>

@@ -3,6 +3,18 @@
 Makes phone photos of far-away, brightly lit shows look more like DSLR shots.
 Runs locally, no account or upload.
 
+## Web app (upload a photo, get a better one)
+
+    pip install -r requirements.txt
+    python app.py                    # open http://localhost:8000
+    python app.py --host 0.0.0.0     # reachable from your phone on the same Wi-Fi
+
+Pick a photo (camera roll works, HEIC too), choose a look, and slide before/after.
+"Fast" skips the AI cleanup. Photos are processed in memory and dropped after an hour;
+nothing leaves the machine running it.
+
+## Command line
+
     pip install -r requirements.txt
     python enhance.py photo.jpg -p concert --compare
     python enhance.py my_show_folder/ -p night

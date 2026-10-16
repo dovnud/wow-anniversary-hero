@@ -5,3 +5,6 @@ pillow
 torch
 timm
 einops
+
+pillow-heif
+flask
