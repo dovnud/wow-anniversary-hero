@@ -34,6 +34,7 @@ class Settings:
     sharpen: float = 0.5
     grain: float = 0.15       # film-ish grain hides plastic denoise look
     vignette: float = 0.2
+    floor: float = 0.004      # linear level below which shadows are left alone (stops lifting pure-black noise)
     warmth: float = 0.0       # -1 cool .. +1 warm
 
 
@@ -134,7 +135,9 @@ def tone_map(lin, s):
     detail = logy - base
     # fixed targets (not the median): dark shows are mostly black, so a median pivot lifts nothing
     ref_dark, ref_bright = np.log2(0.2), np.log2(0.55)
-    lift = np.minimum(np.clip(ref_dark - base, 0, None) * 0.45 * s.shadows, 1.6)  # dark areas up, capped so noise isn't boosted
+    floor = np.clip((base - np.log2(s.floor * 0.25)) / np.log2(4.0), 0, 1)   # 0 deep in the black -> 1 above s.floor
+    floor = floor * floor * (3 - 2 * floor)
+    lift = np.minimum(np.clip(ref_dark - base, 0, None) * 0.45 * s.shadows, 1.6) * floor  # dark areas up, capped so noise isn't boosted
     pull = np.clip(base - ref_bright, 0, None) * (-0.6 * s.highlights)           # bright areas down
     new_y = 2.0 ** (base + lift + pull + detail)
     ratio = (new_y / y)[..., None]
@@ -199,6 +202,10 @@ def lens_look(srgb, s, seed=0):
 def enhance(rgb, s):
     rgb = denoise(rgb, s)
     rgb = upscale(rgb, s)
+    return grade(rgb, s)
+
+
+def grade(rgb, s):
     lin = srgb_to_lin(rgb.astype(np.float32) / 255)
     lin = white_balance(lin, s)
     lin = tone_map(lin, s)
