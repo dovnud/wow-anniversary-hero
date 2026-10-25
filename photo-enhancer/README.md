@@ -33,6 +33,11 @@ is trained to reproduce the clean image, so it doesn't invent or reshape facial 
 `--no-ai` skips it (fast); `--ai 0.5` blends it with the original. Expect ~1-3 min per
 photo on CPU, seconds on a GPU.
 
+**DSLR lens look:** `dslr_look.py` estimates depth (Depth-Anything-V2) and finds the performers
+(DeepLabV3). Performers, and anything at their distance, are never blurred; the backdrop and
+foreground fall softly out of focus with round bokeh, and near-clipped stage lights get a soft
+glow. `--dslr 0` turns it off, `--dslr 1.4` makes the blur stronger.
+
 Limits: it can't invent detail the phone never captured. It can't invent detail that the phone never
 captured (a performer's face from 50 m). For that, add a learned model (Real-ESRGAN,
 SwinIR) or a generative edit API as an optional step after denoising.

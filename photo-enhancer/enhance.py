@@ -35,6 +35,7 @@ class Settings:
     grain: float = 0.15       # film-ish grain hides plastic denoise look
     vignette: float = 0.2
     floor: float = 0.004      # linear level below which shadows are left alone (stops lifting pure-black noise)
+    dslr: float = 1.0         # 0..1.5 lens look: depth-based background blur (people never blurred), bokeh, light glow
     warmth: float = 0.0       # -1 cool .. +1 warm
 
 
@@ -202,7 +203,14 @@ def lens_look(srgb, s, seed=0):
 def enhance(rgb, s):
     rgb = denoise(rgb, s)
     rgb = upscale(rgb, s)
-    return grade(rgb, s)
+    out = grade(rgb, s)
+    if s.dslr > 0:
+        try:
+            import dslr_look
+            out, _ = dslr_look.apply(out, s.dslr)
+        except ImportError as e:
+            print(f"DSLR lens look unavailable ({e}); pip install transformers torch torchvision", file=sys.stderr)
+    return out
 
 
 def grade(rgb, s):

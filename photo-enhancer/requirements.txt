@@ -8,3 +8,5 @@ einops
 
 pillow-heif
 flask
+transformers
+torchvision
