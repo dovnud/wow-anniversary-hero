@@ -21,26 +21,27 @@ EXTS = {".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff", ".bmp"}
 
 @dataclass
 class Settings:
-    ai: float = 0.85          # 0..1 blend of the learned (non-generative) denoiser; 0 = classical only
+    ai: float = 0.65          # 0..1 blend of the learned (non-generative) denoiser; 0 = classical only
     denoise: float = 0.6      # classical denoise strength (used alone, or lightly on top of AI)
     upscale: float = 1.0      # output scale factor
     wb: float = 0.0           # 0 = keep stage color cast, 1 = fully neutralize (stage light IS the mood, keep low)
     exposure: float = 0.0     # EV before tone mapping
     shadows: float = 0.5      # 0..1 lift dark areas
     highlights: float = 0.5   # 0..1 pull bright lights back (saves color in blown LEDs)
-    contrast: float = 0.35    # filmic S-curve strength
-    vibrance: float = 0.3     # boosts muted colors more than saturated ones
-    clarity: float = 0.35     # local contrast
-    sharpen: float = 0.5
-    grain: float = 0.15       # film-ish grain hides plastic denoise look
+    contrast: float = 0.2     # filmic S-curve strength
+    vibrance: float = 0.0     # boosts muted colors more than saturated ones
+    clarity: float = 0.05     # local contrast
+    sharpen: float = 0.10     # light on purpose: phones already bake in crunchy edges
+    grain: float = 0.35       # film-ish grain hides plastic denoise look
     vignette: float = 0.2
     floor: float = 0.004      # linear level below which shadows are left alone (stops lifting pure-black noise)
-    dslr: float = 1.0         # 0..1.5 lens look: depth-based background blur (people never blurred), bokeh, light glow
+    dslr: float = 0.8         # 0..1.5 lens look: depth-based background blur (people never blurred), bokeh, light glow
+    soften: float = 0.55      # 0..1 calms the crunchy edge outlines phones bake in (then grain restores texture)
     warmth: float = 0.0       # -1 cool .. +1 warm
 
 
 PRESETS = {
-    "concert": Settings(shadows=0.7, clarity=0.4),
+    "concert": Settings(shadows=0.7),
     "dslr": Settings(denoise=0.4, wb=0.5, shadows=0.3, highlights=0.3, contrast=0.3,
                      vibrance=0.2, clarity=0.3, grain=0.08, vignette=0.15),
     "night": Settings(ai=1.0, exposure=0.5, shadows=0.9, highlights=0.65,
@@ -184,6 +185,15 @@ def clarity_sharpen(srgb, s):
     return out
 
 
+def compress_gamut(srgb, knee=0.78):
+    """Roll off the most saturated colors instead of letting them clip into neon (a big 'digital' tell)."""
+    mx, mn = srgb.max(-1, keepdims=True), srgb.min(-1, keepdims=True)
+    sat = (mx - mn) / np.maximum(mx, 1e-4)
+    over = np.clip((sat - knee) / (1 - knee), 0, 1)
+    gray = srgb.mean(-1, keepdims=True)
+    return srgb + (gray - srgb) * (over ** 1.5 * 0.35)
+
+
 def lens_look(srgb, s, seed=0):
     h, w = srgb.shape[:2]
     if s.vignette > 0:
@@ -220,7 +230,10 @@ def grade(rgb, s):
     srgb = lin_to_srgb(lin).astype(np.float32)
     srgb = filmic(srgb, s)
     srgb = vibrance(np.clip(srgb, 0, 1), s)
+    if s.soften > 0:
+        srgb = cv2.addWeighted(srgb, 1 - s.soften, cv2.GaussianBlur(srgb, (0, 0), 0.9), s.soften, 0)
     srgb = clarity_sharpen(srgb, s)
+    srgb = compress_gamut(srgb)
     srgb = lens_look(srgb, s)
     return (np.clip(srgb, 0, 1) * 255 + 0.5).astype(np.uint8)
 

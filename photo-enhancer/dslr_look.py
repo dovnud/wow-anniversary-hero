@@ -91,7 +91,7 @@ def blur_map(rgb, strength, focus=None):
     return cv2.GaussianBlur(r, (0, 0), 2.0), near, mask, focus, prot
 
 
-def apply(rgb, strength=1.0, glow=0.22, grain=0.012, seed=1):
+def apply(rgb, strength=1.0, glow=0.14, grain=0.02, seed=1):
     h, w = rgb.shape[:2]
     rmap, near, mask, focus, prot = blur_map(rgb, strength)
     lin = (rgb.astype(np.float32) / 255) ** 2.2
