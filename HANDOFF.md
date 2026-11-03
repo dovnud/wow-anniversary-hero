@@ -53,3 +53,12 @@ If you would rather stay 2D: render the 9 in the canvas with far more detail (be
 
 ## Known environment limits from the previous session
 The previous sandbox blocked wow-vegas.com, the Webflow CDN and Google Fonts, so the real photo, logo and Anton were never seen in a render. Please check the 9 against the actual logo and the real hero photo.
+
+## Update: `wow-logo.html` (real 3D WOW logo in the water)
+A second hero, separate from the "9" version in `index.html`. The WOW logo is real Three.js geometry, not a texture:
+- `tools/trace_logo.py` traces `assets/wow-logo.webp` into the compact `TRACE` JSON embedded at the top of the script: letter-face outlines (W, O, W, plus the O's counter) and 69 bulb positions. The O is a few bulbs short of the real logo, since dim bulbs are missed by the circle detector. Add missing ones by hand in `TRACE.B` if it matters.
+- Letters are `ExtrudeGeometry` with bevels (metal face, procedural scratch texture). Bulbs are instanced: socket ring, recess, glass, hot core, highlight, additive glow. Neon is three tubes (core plus two glows) with a jittering crackle line on each outline. The O sits 0.2 in front of the W's, as in the logo.
+- The water block is copied verbatim from `index.html`. The one change is a gamma encode in `numSample`, because the logo is now a linear render target instead of a canvas texture. Each frame the logo is rendered from the front into a render target, and the water reflects and refracts that, so the reflection is the real 3D logo.
+- The waterline is a clipping plane at y = 0 on every logo material. The camera sways slowly (and follows the pointer) so the extrusion shows its depth.
+- Tested headless (SwiftShader) at desktop and phone sizes, plus the no-WebGL fallback. Not yet tested on real GPUs or against the real photo and Anton, which were blocked in the sandbox.
+- Not done: the Webflow 3-file split for this version, and an exact match on face texture and the bulb glass look.
