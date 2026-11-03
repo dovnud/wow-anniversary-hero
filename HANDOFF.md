@@ -62,3 +62,6 @@ A second hero, separate from the "9" version in `index.html`. The WOW logo is re
 - The waterline is a clipping plane at y = 0 on every logo material. The camera sways slowly (and follows the pointer) so the extrusion shows its depth.
 - Tested headless (SwiftShader) at desktop and phone sizes, plus the no-WebGL fallback. Not yet tested on real GPUs or against the real photo and Anton, which were blocked in the sandbox.
 - Not done: the Webflow 3-file split for this version, and an exact match on face texture and the bulb glass look.
+
+### wow-logo.html, logo-image front (latest)
+The flat front cap of each extruded letter is now textured with the real logo image (`assets/wow-logo.webp`, via `uv1`), so the wood and metal, bulbs and neon match the logo exactly. The extruded sides and bevel are dark matte steel. The procedural neon, sockets and glass stay in the file as a fallback and are hidden once the image loads. Live bulb glow is still added on top. **For Webflow, host `assets/wow-logo.webp` and set `LOGO_SRC` at the top of the script to its URL.** The page must be served over http(s); a `file://` page cannot load the texture. Idea from another Claude session's WOW sign (image as the front face).
