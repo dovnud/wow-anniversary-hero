@@ -129,6 +129,9 @@
 
   /* stand-in for the existing video section so the anchor has somewhere to land; delete when merging */
   .demo-watch { min-height: 70vh; display: grid; place-items: center; color: #8b93a1; font: 16px Helvetica, Arial, sans-serif; background: #0b0e14; }
+  .wow9__loader { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; pointer-events: none; transition: opacity .7s; font: 500 18px/1 "IBM Plex Mono", ui-monospace, Menlo, monospace; color: #73d7ff; letter-spacing: .1em; }
+  .wow9.is-ready .wow9__loader { opacity: 0; }
+  @media (prefers-reduced-motion: reduce) { .wow9__loader { display: none; } }
 </style>
 </head>
 <body>
@@ -138,6 +141,7 @@
   <div class="wow9__shade"></div>
   <div class="wow9__fallback9" aria-hidden="true">WOW</div>
   <canvas class="wow9__gl" aria-hidden="true"></canvas>
+  <div class="wow9__loader" aria-hidden="true"><span class="wow9__ascii">===+++===-</span></div>
 
   <nav class="wow9__nav">
     <a class="wow9__logo" href="https://wow-vegas.com/" aria-label="WOW - The Vegas Spectacular home">
@@ -226,7 +230,8 @@
     uNumW: { value: QW },
     uNumH: { value: QH },
     uNumSub: { value: SUB + PAD },
-    uBeat: { value: 1 }
+    uBeat: { value: 1 },
+    uRip: { value: null }, uRipTexel: { value: new THREE.Vector2(1 / 256, 1 / 200) }, uRipK: { value: 0 }
   };
 
   /* ---------------- water (unchanged from the approved version, except one gamma line) ---------------- */
@@ -270,15 +275,20 @@
         'varying vec3 vW;',
         'uniform float uTime, uNumW, uNumH, uNumSub, uBeat;',
         'uniform vec3 uCam;',
-        'uniform sampler2D uTex;',
+        'uniform sampler2D uTex; uniform sampler2D uRip; uniform vec2 uRipTexel; uniform float uRipK;',
         GLSL_WAVES,
         'float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }',
+        'float ridge(vec2 p, float t){',
+        '  float v = sin(p.x * 1.7 + t) + sin(p.y * 1.3 - t * 1.1) + sin((p.x + p.y) * 1.1 + t * 0.7) + sin(length(p - vec2(3.0, 2.0)) * 1.9 - t * 0.8);',
+        '  return pow(clamp(1.0 - abs(v) * 0.5, 0.0, 1.0), 5.0);',
+        '}',
+        'float caus(vec2 p, float t){ return min(ridge(p * 1.6, t * 0.9), ridge(p * 2.3 + vec2(4.0, -2.0), -t * 0.7)); }',
         'vec2 numUV(vec2 xy){ return vec2(xy.x / uNumW + 0.5, (xy.y + uNumSub) / uNumH); }',
         'vec4 numSample(vec2 xy, float bias){',
         '  vec2 uv = numUV(xy);',
         '  if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return vec4(0.0);',
         '  float edge = smoothstep(0.0, 0.06, uv.x) * smoothstep(1.0, 0.94, uv.x) * smoothstep(0.0, 0.05, uv.y) * smoothstep(1.0, 0.95, uv.y);',
-        '  vec4 t = texture2D(uTex, uv, bias); t.rgb = pow(max(t.rgb, vec3(0.0)), vec3(0.4545)); return t * edge;',
+        '  return texture2D(uTex, uv, bias) * edge;',
         '}',
         'void main(){',
         '  vec2 p = vW.xz;',
@@ -287,6 +297,12 @@
         '  float hx = waveH(p + vec2(e, 0.0), uTime, 1.0);',
         '  float hz = waveH(p + vec2(0.0, e), uTime, 1.0);',
         '  vec3 N = normalize(vec3(-(hx - h0) / e, 1.0, -(hz - h0) / e));',
+        '  vec2 ruv = vec2((vW.x + 9.0) / 18.0, (vW.z + 5.0) / 14.0);',
+        '  if (uRipK > 0.0 && ruv.x > 0.0 && ruv.x < 1.0 && ruv.y > 0.0 && ruv.y < 1.0) {',
+        '    float rl = texture2D(uRip, ruv - vec2(uRipTexel.x, 0.0)).r, rr = texture2D(uRip, ruv + vec2(uRipTexel.x, 0.0)).r;',
+        '    float rb = texture2D(uRip, ruv - vec2(0.0, uRipTexel.y)).r, rt = texture2D(uRip, ruv + vec2(0.0, uRipTexel.y)).r;',
+        '    N = normalize(N + vec3(-(rr - rl), 0.0, -(rt - rb)) * uRipK * 6.0);',
+        '  }',
         '  vec3 V = normalize(vW - uCam);',
         '  float cosT = max(dot(N, -V), 0.0);',
         '  float fres = 0.04 + 0.96 * pow(1.0 - cosT, 4.0);',
@@ -347,6 +363,9 @@
         '  // light pooled around the base of the numeral',
         '  float pool = exp(-pow(vW.x / (uNumW * 0.5), 2.0)) * exp(-abs(vW.z) * 1.4);',
         '  col += warm * pool * 0.35 * uBeat;',
+        '  float cs = caus(p, uTime);',
+        '  col += mix(vec3(0.25, 0.65, 1.0), vec3(1.0, 0.55, 0.2), 0.25) * cs * (pool * 1.1 + 0.05) * uBeat;',
+        '  a += cs * pool * 0.3;',
         '  a += pool * 0.2;',
         '',
         '  // crest highlights',
@@ -376,6 +395,9 @@
   panel(new THREE.Color(2.4, 0.9, 0.25), 14, 5, -16, -2, 12);    // warm panel, front left
   panel(new THREE.Color(0.4, 0.8, 1.6), 20, 4, 4, 10, -18);      // cool top back
   scene.environment = pm.fromScene(envS, 0.02).texture;
+  // From here on every pass renders into a render target holding display-referred colour (the water shader already writes that).
+  // Built-in materials get the sRGB-ish encode appended, so the post pass can treat the whole frame the same way.
+  THREE.ShaderChunk.colorspace_fragment += '\n gl_FragColor.rgb = pow(max(gl_FragColor.rgb, vec3(0.0)), vec3(1.0 / 2.2));';
 
   scene.add(new THREE.HemisphereLight(0x5aaeff, 0x14161e, 1.0));
   var key = new THREE.DirectionalLight(0xfff0e0, 2.6); key.position.set(-4, 7, 9); scene.add(key);
@@ -537,7 +559,136 @@
     proc.forEach(function (o) { o.visible = false; });
     imageMode = true;
     if (!running) renderOnce();
-  }, undefined, function () { /* image missing: keep the procedural front */ });
+    root.classList.add('is-ready');
+  }, undefined, function () { root.classList.add('is-ready'); /* image missing: keep the procedural front */ });
+  setTimeout(function () { root.classList.add('is-ready'); }, 6000);
+  (function () {                                   // ASCII loader, shown until the logo image is in
+    var el = root.querySelector('.wow9__ascii'), pat = '===+++===---', i = 0;
+    if (!el) return;
+    var id = setInterval(function () { el.textContent = (pat + pat).substr(i++ % pat.length, 10); if (root.classList.contains('is-ready')) clearInterval(id); }, 70);
+  })();
+
+  /* ---------------- ripples: a small wave-equation sim the pointer and ambient drops disturb ---------------- */
+  var RX0 = -9, RW = 18, RZ0 = -5, RD = 14;           // the patch of water (world x, z) the sim covers
+  var ripOK = renderer.extensions.has('EXT_color_buffer_float') || renderer.extensions.has('EXT_color_buffer_half_float');
+  var ripA, ripB, simScene, simCam, simMat;
+  if (ripOK) {
+    var ro = { type: THREE.HalfFloatType, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, depthBuffer: false };
+    ripA = new THREE.WebGLRenderTarget(256, 200, ro); ripB = new THREE.WebGLRenderTarget(256, 200, ro);
+    simCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1); simScene = new THREE.Scene();
+    simMat = new THREE.ShaderMaterial({
+      uniforms: { tPrev: { value: null }, uTexel: { value: new THREE.Vector2(1 / 256, 1 / 200) }, uHit: { value: new THREE.Vector2(-5, -5) }, uStr: { value: 0 }, uRad: { value: 0.35 } },
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = position.xy * 0.5 + 0.5; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+      fragmentShader: [
+        'precision highp float; varying vec2 vUv; uniform sampler2D tPrev; uniform vec2 uTexel, uHit; uniform float uStr, uRad;',
+        'void main(){',
+        '  vec4 c = texture2D(tPrev, vUv); float h = c.r, v = c.g;',
+        '  float avg = (texture2D(tPrev, vUv + vec2(uTexel.x, 0.0)).r + texture2D(tPrev, vUv - vec2(uTexel.x, 0.0)).r + texture2D(tPrev, vUv + vec2(0.0, uTexel.y)).r + texture2D(tPrev, vUv - vec2(0.0, uTexel.y)).r) * 0.25;',
+        '  v += (avg - h) * 0.9; v *= 0.989; h += v;',
+        '  vec2 d = (vUv - uHit) * vec2(18.0, 14.0);',
+        '  h += uStr * exp(-dot(d, d) / (uRad * uRad));',
+        '  vec2 e = min(vUv, 1.0 - vUv); h *= smoothstep(0.0, 0.05, min(e.x, e.y));',
+        '  gl_FragColor = vec4(h, v, 0.0, 1.0);',
+        '}'
+      ].join('\n')
+    });
+    simScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), simMat));
+    uniforms.uRip.value = ripA.texture; uniforms.uRipK.value = 2.4;
+  }
+  var ptr = { nx: 0, ny: 0, inside: false, px: 0, py: 0, speed: 0 }, ray = new THREE.Raycaster(), wplane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hitV = new THREE.Vector3(), nextDrop = 1.2;
+  function simStep(t) {
+    if (!ripOK) return;
+    var str = 0, hx = -5, hz = -5;
+    if (ptr.inside && ptr.speed > 0.002) {
+      ray.setFromCamera(new THREE.Vector2(ptr.nx, ptr.ny), camera);
+      if (ray.ray.intersectPlane(wplane, hitV) && hitV.x > RX0 && hitV.x < RX0 + RW && hitV.z > RZ0 && hitV.z < RZ0 + RD) {
+        hx = (hitV.x - RX0) / RW; hz = (hitV.z - RZ0) / RD; str = Math.min(0.9, ptr.speed * 14);
+      }
+    }
+    ptr.speed *= 0.6;
+    if (!reduce && t > nextDrop) {                         // ambient drops near the base of the sign
+      nextDrop = t + 0.9 + Math.random() * 1.4;
+      if (str === 0) { hx = (Math.random() * 10 - 5 - RX0) / RW; hz = (Math.random() * 3 + 0.6 - RZ0) / RD; str = 0.7; }
+    }
+    for (var k = 0; k < 2; k++) {
+      simMat.uniforms.tPrev.value = ripA.texture;
+      simMat.uniforms.uHit.value.set(hx, hz); simMat.uniforms.uStr.value = k === 0 ? str : 0;
+      renderer.setRenderTarget(ripB); renderer.render(simScene, simCam);
+      var tmp = ripA; ripA = ripB; ripB = tmp;
+    }
+    renderer.setRenderTarget(null);
+    uniforms.uRip.value = ripA.texture;
+  }
+
+  /* ---------------- embers drifting up from the bulbs ---------------- */
+  var NE = 110, ep = new Float32Array(NE * 3), er = new Float32Array(NE * 3);
+  for (var ei = 0; ei < NE; ei++) {
+    ep[ei * 3] = (Math.random() - 0.5) * LW * 0.95; ep[ei * 3 + 1] = Math.random() * 3.4; ep[ei * 3 + 2] = Math.random() * 1.6 - 0.4;
+    er[ei * 3] = Math.random(); er[ei * 3 + 1] = 0.25 + Math.random() * 0.45; er[ei * 3 + 2] = Math.random() * 6.283;
+  }
+  var eg = new THREE.BufferGeometry();
+  eg.setAttribute('position', new THREE.BufferAttribute(ep, 3)); eg.setAttribute('rnd', new THREE.BufferAttribute(er, 3));
+  var embers = new THREE.Points(eg, new THREE.ShaderMaterial({
+    uniforms: { uTime: uniforms.uTime, uPx: { value: 1 }, uPower: { value: 1 } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: [
+      'attribute vec3 rnd; uniform float uTime, uPx; varying float vA;',
+      'void main(){',
+      '  vec3 p = position; float H = 3.6;',
+      '  p.y = mod(position.y + uTime * rnd.y, H);',
+      '  p.x += sin(uTime * 0.7 + rnd.z) * 0.18; p.z += cos(uTime * 0.5 + rnd.z) * 0.1;',
+      '  vA = smoothstep(0.0, 0.35, p.y) * (1.0 - smoothstep(H * 0.55, H, p.y)) * (0.55 + 0.45 * sin(uTime * 6.0 + rnd.z * 9.0));',
+      '  vec4 mv = viewMatrix * modelMatrix * vec4(p, 1.0);',
+      '  gl_PointSize = uPx * (7.0 + rnd.x * 9.0) / -mv.z * 14.0;',
+      '  gl_Position = projectionMatrix * mv;',
+      '}'
+    ].join('\n'),
+    fragmentShader: [
+      'precision mediump float; varying float vA; uniform float uPower;',
+      'void main(){ float d = length(gl_PointCoord - 0.5) * 2.0; float a = smoothstep(1.0, 0.0, d); a *= a;',
+      '  gl_FragColor = vec4(vec3(1.0, 0.45, 0.12) * a * vA * uPower, a * vA * uPower); }'
+    ].join('\n')
+  }));
+  embers.frustumCulled = false; scene.add(embers);
+
+  /* ---------------- post: chromatic aberration, frost on scroll, grade, vignette, grain ---------------- */
+  var sceneRT = new THREE.WebGLRenderTarget(4, 4, { samples: 4 });
+  var postScene = new THREE.Scene(), postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  var postMat = new THREE.ShaderMaterial({
+    uniforms: { tScene: { value: sceneRT.texture }, uTime: uniforms.uTime, uCA: { value: 0 }, uFrost: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) } },
+    depthTest: false, depthWrite: false,
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = position.xy * 0.5 + 0.5; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+    fragmentShader: [
+      'precision highp float; varying vec2 vUv; uniform sampler2D tScene; uniform float uTime, uCA, uFrost; uniform vec2 uRes;',
+      'float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }',
+      'float vn(vec2 p){ vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);',
+      '  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y); }',
+      'float fbm(vec2 p){ return vn(p) * 0.55 + vn(p * 2.1) * 0.3 + vn(p * 4.3) * 0.15; }',
+      'void main(){',
+      '  vec2 uv = vUv; vec2 d = uv - 0.5; float r = length(d * vec2(uRes.x / uRes.y, 1.0));',
+      '  // frost: icy displacement that builds as the page scrolls away',
+      '  float fr = uFrost * smoothstep(0.0, 1.0, 1.0 - uv.y * 0.7);',
+      '  uv += (vec2(fbm(uv * 14.0 + 3.0), fbm(uv * 14.0 + 11.0)) - 0.5) * 0.075 * fr;',
+      '  // chromatic aberration: 5 taps along the radial direction, split across the spectrum',
+      '  float s = uCA + 0.006 * r * r;',
+      '  vec3 acc = vec3(0.0); vec3 wsum = vec3(0.0); float aa = 0.0;',
+      '  for (int i = 0; i < 5; i++) {',
+      '    float t = float(i) / 4.0; float k = (t - 0.5) * 2.0;',
+      '    vec3 w = vec3(1.0 - t, 1.0 - abs(k), t) + 0.05;',
+      '    vec4 c = texture2D(tScene, uv - d * s * k);',
+      '    acc += c.rgb * w; wsum += w; aa += c.a / 5.0;',
+      '  }',
+      '  vec3 col = acc / wsum;',
+      '  // grade: gentle s-curve, cool shadows',
+      '  col = mix(col, col * col * (3.0 - 2.0 * col), 0.22);',
+      '  col += vec3(-0.004, 0.002, 0.012) * (1.0 - col) * aa;',
+      '  col *= 1.0 - 0.32 * smoothstep(0.35, 0.95, r);',
+      '  col += (hash(gl_FragCoord.xy + fract(uTime) * 91.0) - 0.5) * 0.028 * aa;',
+      '  gl_FragColor = vec4(max(col, 0.0), aa);',
+      '}'
+    ].join('\n')
+  });
+  postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), postMat));
+  var ptrSpeedSm = 0;
 
   /* ---------------- per-frame animation ---------------- */
   var ph = TRACE.B.map(function (b, i) { return (i * 2.399) % 6.283; });
@@ -597,9 +748,11 @@
   var camDist = 15;
   function resize() {
     var w = root.clientWidth, h = root.clientHeight;
-    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     renderer.setPixelRatio(dpr);
     renderer.setSize(w, h, false);
+    sceneRT.setSize(Math.round(w * dpr), Math.round(h * dpr)); postMat.uniforms.uRes.value.set(w, h);
+    embers.material.uniforms.uPx.value = h * dpr / 900;
     camera.aspect = w / h;
     var tanH = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
     var needW = LW * 1.2;
@@ -636,8 +789,19 @@
       renderer.render(scene, rtCam);
       renderer.setRenderTarget(null); renderer.localClippingEnabled = true; water.visible = true;
     }
-    // pass 2: the real scene
+    // pass 2: ripple sim, then the real scene into a render target
+    simStep(t);
+    renderer.setRenderTarget(sceneRT); renderer.setClearColor(0x000000, 0); renderer.clear();
     renderer.render(scene, camera);
+    // pass 3: post effects to the screen. Scroll builds frost + colour split; pointer speed and the power-on add a burst.
+    var rr = root.getBoundingClientRect(), sp = Math.min(1, Math.max(0, -rr.top / Math.max(rr.height, 1)));
+    ptrSpeedSm += (Math.min(ptr.speed * 1.0, 0.08) - ptrSpeedSm) * 0.15;
+    var intro = reduce ? 0 : Math.max(0, 1 - t / 2.4);
+    postMat.uniforms.uCA.value = 0.0035 + sp * 0.05 + ptrSpeedSm * 0.12 + intro * intro * 0.04;
+    postMat.uniforms.uFrost.value = Math.min(1, sp * 1.4) + intro * 0.6;
+    embers.material.uniforms.uPower.value = uniforms.uBeat.value;
+    renderer.setRenderTarget(null);
+    renderer.render(postScene, postCam);
   }
   function loop() {
     if (!running) return;
@@ -649,6 +813,9 @@
 
   window.addEventListener('pointermove', function (e) {
     var r = root.getBoundingClientRect();
+    var nx = ((e.clientX - r.left) / r.width) * 2 - 1, ny = -(((e.clientY - r.top) / r.height) * 2 - 1);
+    ptr.inside = nx > -1 && nx < 1 && ny > -1 && ny < 1;
+    ptr.speed = Math.max(ptr.speed, Math.hypot(nx - ptr.nx, ny - ptr.ny)); ptr.nx = nx; ptr.ny = ny;
     swayTarget = ((e.clientX - r.left) / r.width - 0.5) * 4.4;
     if (swayTarget === 0) swayTarget = 1e-4;
   }, { passive: true });
