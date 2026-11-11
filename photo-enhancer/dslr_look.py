@@ -72,11 +72,15 @@ def blur_map(rgb, strength, focus=None):
     h, w = rgb.shape[:2]
     near = nearness(rgb)
     mask = person_mask(rgb)
-    hard = mask > 0.5
-    if focus is None:
-        focus = float(np.median(near[hard])) if hard.mean() > 0.005 else float(np.percentile(near, 70))
+    pm = mask > 0.3
+    if pm.mean() > 0.005:
+        # the in-focus band covers ALL the depth the people occupy (a camera at show distance keeps a whole group sharp)
+        lo, hi = np.percentile(near[pm], [4, 98])
+    else:
+        c = float(np.percentile(near, 70)); lo, hi = c - 0.1, c + 0.1
+    focus = (lo + hi) / 2
     maxr = 0.0075 * max(h, w) * strength            # ~19 px on a 2576 px photo at strength 1
-    dist = np.abs(near - focus)
+    dist = np.clip(lo - near, 0, None) + np.clip(near - hi, 0, None)   # 0 inside the band, grows outside it
     r = maxr * np.clip((dist - 0.07) / 0.40, 0, 1) ** 1.2
     # performers stay sharp: dilate + feather the mask so hair/costume edges are covered
     prot = cv2.dilate((mask > 0.3).astype(np.uint8), np.ones((17, 17), np.uint8)).astype(np.float32)

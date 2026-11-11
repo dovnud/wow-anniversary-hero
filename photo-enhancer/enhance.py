@@ -16,7 +16,13 @@ import cv2
 import numpy as np
 from PIL import Image, ImageOps
 
-EXTS = {".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff", ".bmp"}
+try:  # iPhone HEIC photos
+    import pillow_heif
+    pillow_heif.register_heif_opener()
+except ImportError:
+    pass
+
+EXTS = {".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff", ".bmp", ".heic", ".heif"}
 
 
 @dataclass
@@ -185,11 +191,9 @@ def clarity_sharpen(srgb, s):
     return out
 
 
-def compress_gamut(srgb, knee=0.78):
-    """Roll off the most saturated colors instead of letting them clip into neon (a big 'digital' tell)."""
-    mx, mn = srgb.max(-1, keepdims=True), srgb.min(-1, keepdims=True)
-    sat = (mx - mn) / np.maximum(mx, 1e-4)
-    over = np.clip((sat - knee) / (1 - knee), 0, 1)
+def compress_gamut(srgb, start=0.9):
+    """Only colors about to clip roll off toward white (like film). Vivid-but-in-range color is left alone."""
+    over = np.clip((srgb.max(-1, keepdims=True) - start) / (1 - start), 0, 1)
     gray = srgb.mean(-1, keepdims=True)
     return srgb + (gray - srgb) * (over ** 1.5 * 0.35)
 
